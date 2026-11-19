@@ -46,6 +46,19 @@ class MainActivity : Activity() {
     private val executor = Executors.newSingleThreadExecutor()
     private var lastPingResult: String? = null
 
+    // live auto-refresh: redraw log/stats/last-payment every 2s while the
+    // activity is visible, so incoming payments appear without reopening.
+    private val refreshHandler = android.os.Handler(android.os.Looper.getMainLooper())
+    private val refreshRunnable = object : Runnable {
+        override fun run() {
+            refreshLog()
+            refreshStats()
+            refreshLast()
+            refreshStatus()
+            refreshHandler.postDelayed(this, 2000)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -80,6 +93,7 @@ class MainActivity : Activity() {
         findViewById<Button>(R.id.btnClear).setOnClickListener {
             LogStore.clear(); refreshLog()
         }
+        findViewById<Button>(R.id.btnHistory).setOnClickListener { showPaymentHistory() }
 
         // status card tap -> open listener settings when permission missing
         cardStatus.setOnClickListener {
@@ -254,6 +268,7 @@ class MainActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
+        refreshHandler.post(refreshRunnable)
         swEnabled.isChecked = Prefs.enabled(this)
         etUrl.setText(Prefs.gatewayUrl(this))
         etSecret.setText(Prefs.secret(this))
@@ -264,6 +279,56 @@ class MainActivity : Activity() {
         refreshStats()
         refreshLast()
         refreshLog()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        refreshHandler.removeCallbacks(refreshRunnable)
+    }
+
+    // ---- payment history (all incoming payments, persisted) ----
+
+    private fun showPaymentHistory() {
+        val entries = PaymentStore.all(this)
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(8))
+        }
+        if (entries.isEmpty()) {
+            container.addView(TextView(this).apply {
+                text = "Belum ada pembayaran masuk."
+                textSize = 13f
+                setTextColor(Color.parseColor("#8A938C"))
+            })
+        } else {
+            val fmt = java.text.SimpleDateFormat("dd MMM HH:mm", java.util.Locale.getDefault())
+            for (e in entries) {
+                container.addView(TextView(this).apply {
+                    text = buildString {
+                        append(if (e.matched) "✅ " else "❓ ")
+                        append(e.amount)
+                        append("  —  ")
+                        append(e.source)
+                        append("\n")
+                        append(fmt.format(java.util.Date(e.time)))
+                        if (e.matched) append("  ·  invoice PAID") else append("  ·  gak cocok invoice")
+                    }
+                    textSize = 13f
+                    setTextColor(Color.parseColor(if (e.matched) "#15803D" else "#B45309"))
+                    setPadding(0, dp(8), 0, dp(4))
+                })
+            }
+        }
+        val scroll = android.widget.ScrollView(this).apply { addView(container) }
+        AlertDialog.Builder(this)
+            .setTitle("Riwayat pembayaran masuk")
+            .setView(scroll)
+            .setPositiveButton("Tutup", null)
+            .setNeutralButton("Bersihkan") { _, _ ->
+                PaymentStore.clear(this)
+                Toast.makeText(this, "Riwayat dibersihkan", Toast.LENGTH_SHORT).show()
+            }
+            .show()
     }
 
     private fun refreshStats() {

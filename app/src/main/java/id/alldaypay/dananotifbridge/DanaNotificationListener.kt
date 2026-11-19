@@ -178,6 +178,9 @@ class DanaNotificationListener : NotificationListenerService() {
         )
         Log.i(GatewayClient.TAG, "forwarding from ${sbn.packageName}: $full")
 
+        // remember the app label so the payment history can show it
+        lastSeenAppLabel = appLabel(sbn.packageName)
+
         val url = Prefs.gatewayUrl(this)
         val secret = Prefs.secret(this)
         executor.execute { sendWithRetry(url, secret, payload, hash) }
@@ -192,6 +195,9 @@ class DanaNotificationListener : NotificationListenerService() {
                 val amountStr = AmountParser.parse(text)?.let { AmountParser.formatRupiah(it) }
                 if (amountStr != null) {
                     Prefs.setLastPayment(this, amountStr, result.matched, System.currentTimeMillis())
+                    // payment history (viewable in-app, persists across restarts)
+                    PaymentStore.append(this, amountStr, result.matched,
+                        appLabelOf(text))
                 }
                 addLog(
                     if (result.matched) "Terkirim & MATCH — invoice PAID (${result.message.take(100)})"
@@ -219,6 +225,13 @@ class DanaNotificationListener : NotificationListenerService() {
     } catch (_: Exception) {
         pkg.substringAfterLast('.').ifEmpty { pkg }
     }
+
+    /** Source label for the payment history — the template may not carry the
+     *  app name, so store a fixed marker from the package that sent it. We do
+     *  not have the package in sendWithRetry, so keep a last-seen label. */
+    private fun appLabelOf(text: String): String = lastSeenAppLabel ?: "phone"
+
+    @Volatile var lastSeenAppLabel: String? = null
 
     private fun String.toUtfSha1Hex(): String =
         java.security.MessageDigest.getInstance("SHA-1")
