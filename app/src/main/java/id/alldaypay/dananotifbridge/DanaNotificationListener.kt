@@ -129,7 +129,9 @@ class DanaNotificationListener : NotificationListenerService() {
             @Suppress("DEPRECATION")
             extras.getParcelableArray(Notification.EXTRA_MESSAGES)?.forEach { m ->
                 if (m is android.os.Bundle) {
-                    add(m.getCharSequence(Notification.MessagingStyle.Message.TEXT_KEY)?.toString())
+                    // "text" = Notification.MessagingStyle.Message.TEXT_KEY
+                    // (the constant itself is hidden from the compile SDK).
+                    add(m.getCharSequence("text")?.toString())
                 }
             }
             extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
