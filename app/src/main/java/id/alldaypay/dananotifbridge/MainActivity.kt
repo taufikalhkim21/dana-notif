@@ -213,9 +213,11 @@ class MainActivity : Activity() {
             container.addView(cb, LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
+        // wrap in ScrollView so long app lists scroll inside the dialog
+        val scroll = android.widget.ScrollView(this).apply { addView(container) }
         AlertDialog.Builder(this)
             .setTitle("Pilih app sumber notif")
-            .setView(container)
+            .setView(scroll)
             .setPositiveButton("Simpan") { _, _ ->
                 val chosen = apps.filterIndexed { i, _ ->
                     container.getChildAt(i) is CheckBox && (container.getChildAt(i) as CheckBox).isChecked

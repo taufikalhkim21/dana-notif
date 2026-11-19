@@ -16,8 +16,9 @@
     </queries>
 
     <application
-        android:label="DANA Notif Bridge"
-        android:icon="@android:drawable/ic_dialog_info"
+        android:label="alldayPay Bridge"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:theme="@style/Theme.Material3.DayNight"
         android:allowBackup="false">
 

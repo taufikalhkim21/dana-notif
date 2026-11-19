@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "DANA Notif Bridge"
+rootProject.name = "alldayPay Bridge"
 include(":app")
