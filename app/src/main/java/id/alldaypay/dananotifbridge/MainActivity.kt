@@ -30,7 +30,6 @@ class MainActivity : Activity() {
     private lateinit var tvStatusTitle: TextView
     private lateinit var tvStatusDetail: TextView
     private lateinit var tvPerm: TextView
-    private lateinit var tvPermState: TextView
     private lateinit var tvBatteryState: TextView
     private lateinit var tvApps: TextView
     private lateinit var tvLog: TextView
@@ -59,7 +58,6 @@ class MainActivity : Activity() {
         tvStatusTitle = findViewById(R.id.tvStatusTitle)
         tvStatusDetail = findViewById(R.id.tvStatusDetail)
         tvPerm = findViewById(R.id.tvPerm)
-        tvPermState = findViewById(R.id.tvPermState)
         tvBatteryState = findViewById(R.id.tvBatteryState)
         tvApps = findViewById(R.id.tvApps)
         tvLog = findViewById(R.id.tvLog)
@@ -354,7 +352,7 @@ class MainActivity : Activity() {
             )
         )
 
-        tvPermState.text = if (granted) "✓ aktif" else "belum aktif — wajib buat baca notif"
+        tvPerm.text = if (granted) "✓ aktif" else "belum aktif — wajib buat baca notif"
         tvBatteryState.text = if (batteryOk) "✓ diizinkan" else "belum — app bisa dimatiin hemat daya"
     }
 
