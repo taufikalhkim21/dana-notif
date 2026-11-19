@@ -6,9 +6,12 @@ object Prefs {
     private const val FILE = "bridge_prefs"
     const val DEFAULT_URL = "http://192.168.1.17:3000"
 
-    // Default watched apps: DANA + Livin' by Mandiri + Livin' Merchant.
+    // Default watched apps: DANA + DANA Kasir (merchant/Bisnis — this is the
+    // one that actually receives "Pembayaran Masuk ... diterima DANA Bisnis",
+    // package id.dana.kasir) + Livin' by Mandiri + Livin' Merchant.
     // User can change this in-app (app picker, like MacroDroid).
-    const val DEFAULT_PACKAGES = "id.dana,com.bankmandiri.livinapp,com.bankmandiri.livinmerchant"
+    const val DEFAULT_PACKAGES =
+        "id.dana,id.dana.kasir,com.bankmandiri.livinapp,com.bankmandiri.livinmerchant"
 
     private fun sp(ctx: Context) = ctx.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
@@ -26,6 +29,14 @@ object Prefs {
     // Watchdog heartbeat interval in minutes (default 3, gateway alerts at 40).
     fun intervalMinutes(ctx: Context): Int = sp(ctx).getInt("interval_minutes", 3)
     fun setIntervalMinutes(ctx: Context, v: Int) = sp(ctx).edit().putInt("interval_minutes", v.coerceIn(1, 14)).apply()
+
+    // Custom body template (MacroDroid style). Placeholders: {APP}, {TITLE},
+    // {TEXT}, {AMOUNT}. Default mimics the exact format MacroDroid used —
+    // proven parsed & matched by the gateway ("Pembayaran MasukRp1.175
+    // diterima DANA Bisnis."). User can edit it in-app if a format differs.
+    fun messageTemplate(ctx: Context): String =
+        sp(ctx).getString("message_template", "Pembayaran Masuk{AMOUNT} diterima {APP}.")!!
+    fun setMessageTemplate(ctx: Context, v: String) = sp(ctx).edit().putString("message_template", v).apply()
 
     // Packages whose notifications get forwarded (user-selected, MacroDroid style).
     fun watchedPackages(ctx: Context): Set<String> {

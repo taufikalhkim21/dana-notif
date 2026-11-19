@@ -25,6 +25,7 @@ class MainActivity : Activity() {
     private lateinit var etUrl: EditText
     private lateinit var etSecret: EditText
     private lateinit var etInterval: EditText
+    private lateinit var etTemplate: EditText
     private lateinit var cardStatus: android.view.View
     private lateinit var dotStatus: android.view.View
     private lateinit var tvStatusTitle: TextView
@@ -53,6 +54,7 @@ class MainActivity : Activity() {
         etUrl = findViewById(R.id.etUrl)
         etSecret = findViewById(R.id.etSecret)
         etInterval = findViewById(R.id.etInterval)
+        etTemplate = findViewById(R.id.etTemplate)
         cardStatus = findViewById(R.id.cardStatus)
         dotStatus = findViewById(R.id.dotStatus)
         tvStatusTitle = findViewById(R.id.tvStatusTitle)
@@ -93,6 +95,7 @@ class MainActivity : Activity() {
             Prefs.setSecret(this, etSecret.text.toString())
             Prefs.setEnabled(this, swEnabled.isChecked)
             if (interval != null) Prefs.setIntervalMinutes(this, interval)
+            Prefs.setMessageTemplate(this, etTemplate.text.toString())
             Toast.makeText(this, "✓ Tersimpan — heartbeat di-restart", Toast.LENGTH_SHORT).show()
             HeartbeatService.restart(this)
             refreshStatus()
@@ -255,6 +258,7 @@ class MainActivity : Activity() {
         etUrl.setText(Prefs.gatewayUrl(this))
         etSecret.setText(Prefs.secret(this))
         etInterval.setText(Prefs.intervalMinutes(this).toString())
+        etTemplate.setText(Prefs.messageTemplate(this))
         refreshStatus()
         refreshApps()
         refreshStats()

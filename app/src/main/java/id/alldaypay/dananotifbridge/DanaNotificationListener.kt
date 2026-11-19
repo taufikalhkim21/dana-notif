@@ -104,6 +104,15 @@ class DanaNotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
+        // Diagnostic: log EVERY notification (compact) so a missed payment can
+        // be traced in-app — e.g. the watch list missing the real package.
+        val extrasAll = sbn.notification?.extras
+        if (extrasAll != null) {
+            val t = extrasAll.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
+            val x = extrasAll.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
+            addLog("NOTIF ${sbn.packageName.substringAfterLast('.')}: ${t.take(30)} — ${x.take(70)}")
+        }
+
         if (!Prefs.enabled(this)) return
 
         // Layer 1: package filter (user-selected list)
@@ -112,9 +121,21 @@ class DanaNotificationListener : NotificationListenerService() {
 
         val extras = sbn.notification?.extras ?: return
         val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString() ?: ""
-        val text = extras.getCharSequence(Notification.EXTRA_TEXT)?.toString() ?: ""
-        val bigText = extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString()
-        val body = (if (!bigText.isNullOrBlank() && bigText.length > text.length) bigText else text).trim()
+        // Some apps (DANA Kasir among them) deliver the body only via
+        // MessagingStyle (EXTRA_MESSAGES) or BIG_TEXT; gather every carrier.
+        val parts = buildList {
+            add(extras.getCharSequence(Notification.EXTRA_TEXT)?.toString())
+            add(extras.getCharSequence(Notification.EXTRA_BIG_TEXT)?.toString())
+            @Suppress("DEPRECATION")
+            extras.getParcelableArray(Notification.EXTRA_MESSAGES)?.forEach { m ->
+                if (m is android.os.Bundle) {
+                    add(m.getCharSequence(Notification.MessagingStyle.Message.TEXT_KEY)?.toString())
+                }
+            }
+            extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES)
+                ?.forEach { add(it?.toString()) }
+        }
+        val body = parts.filter { !it.isNullOrBlank() }.joinToString("\n").trim()
         if (body.isBlank()) return
 
         val full = if (title.isBlank()) body else "$title\n$body"
@@ -133,6 +154,17 @@ class DanaNotificationListener : NotificationListenerService() {
             return
         }
 
+        // MacroDroid-style custom body: user-defined template with
+        // {APP} {TITLE} {TEXT} {AMOUNT}. Empty/broken template falls back to
+        // the raw notification text so payments are never lost.
+        val tpl = Prefs.messageTemplate(this)
+        val payload = if (tpl.isBlank()) full else
+            tpl.replace("{APP}", appLabel(sbn.packageName))
+                .replace("{TITLE}", title)
+                .replace("{TEXT}", body)
+                .replace("{AMOUNT}", amount?.let { AmountParser.formatRupiah(it) } ?: "")
+                .trim().ifEmpty { full }
+
         // Dedup id: package + title + text + minute. Same notif reposted by
         // the OS within the same minute collapses server-side.
         val minute = full.length + (System.currentTimeMillis() / 60_000L)
@@ -146,7 +178,7 @@ class DanaNotificationListener : NotificationListenerService() {
 
         val url = Prefs.gatewayUrl(this)
         val secret = Prefs.secret(this)
-        executor.execute { sendWithRetry(url, secret, full, hash) }
+        executor.execute { sendWithRetry(url, secret, payload, hash) }
     }
 
     private fun sendWithRetry(url: String, secret: String, text: String, hash: String, maxAttempts: Int = 3) {
