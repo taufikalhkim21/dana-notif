@@ -11,6 +11,7 @@ import org.json.JSONObject
 object PaymentStore {
     private const val KEY = "payment_history"
     private const val MAX = 50
+    private const val FILE_NAME = "bridge_prefs"
 
     data class Entry(
         val amount: String,     // "Rp 1.245"
@@ -28,7 +29,9 @@ object PaymentStore {
             .put("time", System.currentTimeMillis())
         arr.put(o)
         val trimmed = if (arr.length() > MAX) {
-            JSONArray.apply { for (i in arr.length() - MAX until arr.length()) put(arr.get(i)) }
+            val keep = JSONArray()
+            for (i in arr.length() - MAX until arr.length()) keep.put(arr.get(i))
+            keep
         } else arr
         sp(ctx).edit().putString(KEY, trimmed.toString()).apply()
     }
@@ -55,5 +58,4 @@ object PaymentStore {
     private fun raw(ctx: Context): String = sp(ctx).getString(KEY, "[]") ?: "[]"
     private fun sp(ctx: Context) =
         ctx.getSharedPreferences(FILE_NAME, Context.MODE_PRIVATE)
-    private const val FILE_NAME = "bridge_prefs"
 }
